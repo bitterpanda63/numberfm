@@ -22,15 +22,15 @@ func main() {
 	case "send":
 		fmt.Println("Sending...")
 		for {
-			// scale factor 100 at 2 kHz
-			Send(ws, 100, 2*1000)
+			// scale factor 1000 at 0.5 kHz
+			Send(ws, 1000, 500)
 
 			// keep sending out the audio
 			time.Sleep(50 * time.Millisecond)
 		}
 	case "recv":
 		fmt.Println("Receiving...")
-		ReadAndBuffer(ws, 100, 2*1000)
+		ReadAndBuffer(ws, 1000, 500)
 	default:
 		log.Fatal("Illegal argument")
 	}
