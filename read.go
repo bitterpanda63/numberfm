@@ -4,49 +4,57 @@ import (
 	"log"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/websocket"
 )
 
 func ReadAndBuffer(ws *websocket.Conn, scaleFactor float64, frequency float64) []int {
-	var latestValue int64 // Use int64 for atomic operations
+	var (
+		latestValue int64
+		mu          sync.RWMutex
+		wg          sync.WaitGroup
+	)
 
-	var wg sync.WaitGroup
+	// Goroutine to continuously read from the WebSocket
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for {
-			// Atomically update the latest value
-			atomic.StoreInt64(&latestValue, int64(readWs(ws)))
+			// Lock for writing
+			mu.Lock()
+			latestValue = readWs(ws)
+			mu.Unlock()
 		}
 	}()
 
 	// Buffer for reconstructed samples
-	var samples []int
-
+	var samples []int64
 	frequencyTicker := time.NewTicker(frequencyToPeriod(frequency))
 	defer frequencyTicker.Stop()
 
-	formerInt := int(atomic.LoadInt64(&latestValue))
+	// Get initial value
+	mu.RLock()
+	formerInt := latestValue
+	mu.RUnlock()
 	log.Printf("Initial value: %d", formerInt)
 
 	for {
 		select {
 		case <-frequencyTicker.C:
-			currentInt := int(atomic.LoadInt64(&latestValue))
+			mu.RLock()
+			currentInt := latestValue
+			mu.RUnlock()
+
 			diff := formerInt - currentInt
-
-			log.Printf("Current int: %d, formerInt: %d, diff: %d", currentInt, formerInt, diff)
-
+			log.Printf("diff: %d", diff)
 			samples = append(samples, diff)
 			formerInt = currentInt
 		}
 	}
 }
 
-func readWs(ws *websocket.Conn) int {
+func readWs(ws *websocket.Conn) int64 {
 	msg := make([]byte, 512)
 	var n int
 	var err error
@@ -54,7 +62,7 @@ func readWs(ws *websocket.Conn) int {
 		log.Fatal(err)
 	}
 	msgString := string(msg[:n])
-	msgInt, err := strconv.Atoi(msgString)
+	msgInt, err := strconv.ParseInt(msgString, 10, 64)
 	if err != nil {
 		log.Fatalf("Error converting string to int: %v", err)
 	}
