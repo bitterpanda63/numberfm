@@ -15,11 +15,12 @@ func ReadAndBuffer(ws *websocket.Conn, scaleFactor float64, frequency float64) [
 	// Period for sample timing
 	period := frequencyToPeriod(frequency)
 
-	formerInt := 0
+	formerInt := readWs(ws)
+	log.Print(formerInt)
 	for {
 		currentInt := readWs(ws)
 		diff := formerInt - currentInt
-		log.Print(diff)
+		log.Printf("Current int: %d, formerInt: %d diff: %d", currentInt, formerInt, diff)
 
 		formerInt = currentInt
 		time.Sleep(period)
