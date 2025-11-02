@@ -3,27 +3,46 @@ package main
 import (
 	"log"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/websocket"
 )
 
 func ReadAndBuffer(ws *websocket.Conn, scaleFactor float64, frequency float64) []int {
+	var latestValue int64 // Use int64 for atomic operations
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			// Atomically update the latest value
+			atomic.StoreInt64(&latestValue, int64(readWs(ws)))
+		}
+	}()
+
 	// Buffer for reconstructed samples
-	//var samples []int
+	var samples []int
 
-	// Period for sample timing
-	period := frequencyToPeriod(frequency)
+	frequencyTicker := time.NewTicker(frequencyToPeriod(frequency))
+	defer frequencyTicker.Stop()
 
-	formerInt := readWs(ws)
-	log.Print(formerInt)
+	formerInt := int(atomic.LoadInt64(&latestValue))
+	log.Printf("Initial value: %d", formerInt)
+
 	for {
-		currentInt := readWs(ws)
-		diff := formerInt - currentInt
-		log.Printf("Current int: %d, formerInt: %d diff: %d", currentInt, formerInt, diff)
+		select {
+		case <-frequencyTicker.C:
+			currentInt := int(atomic.LoadInt64(&latestValue))
+			diff := formerInt - currentInt
 
-		formerInt = currentInt
-		time.Sleep(period)
+			log.Printf("Current int: %d, formerInt: %d, diff: %d", currentInt, formerInt, diff)
+
+			samples = append(samples, diff)
+			formerInt = currentInt
+		}
 	}
 }
 
