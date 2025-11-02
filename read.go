@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"strconv"
 	"sync"
 	"time"
@@ -47,9 +48,11 @@ func ReadAndBuffer(ws *websocket.Conn, scaleFactor float64, frequency float64) [
 			mu.RUnlock()
 
 			diff := formerInt - currentInt
-			log.Printf("diff: %d", diff)
-			samples = append(samples, diff)
-			formerInt = currentInt
+			if math.Abs(float64(diff)) > scaleFactor/100 {
+				log.Printf("significant diff: %d", diff)
+				samples = append(samples, diff)
+				formerInt = currentInt
+			}
 		}
 	}
 }

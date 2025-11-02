@@ -22,6 +22,9 @@ func Send(ws *websocket.Conn, scaleFactor float64, frequency float64) {
 		// Calculate the number of "+" or "-" to send (simplified PWM)
 		// Here, we use the absolute value and scale it to a reasonable range
 		numPulses := int(math.Abs(normalizedSample * scaleFactor))
+		if numPulses == 0 {
+			continue
+		}
 
 		// Send the PWM signal
 		log.Printf("Positive: %t, Pulses: %d", normalizedSample > 0, numPulses)
