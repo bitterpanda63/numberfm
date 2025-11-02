@@ -30,6 +30,7 @@ func main() {
 		}
 	case "recv":
 		fmt.Println("Receiving...")
+		ReadAndBuffer(ws, 100, 2*1000)
 	default:
 		log.Fatal("Illegal argument")
 	}
