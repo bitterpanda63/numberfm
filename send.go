@@ -24,6 +24,7 @@ func Send(ws *websocket.Conn, scaleFactor float64, frequency float64) {
 		numPulses := int(math.Abs(normalizedSample * scaleFactor))
 
 		// Send the PWM signal
+		log.Printf("Positive: %t, Pulses: %d", normalizedSample > 0, numPulses)
 		for j := 0; j < numPulses; j++ {
 			if normalizedSample > 0 {
 				_, err = ws.Write([]byte("+"))
